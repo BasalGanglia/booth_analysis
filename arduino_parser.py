@@ -1,6 +1,7 @@
 import os
 import pandas as pd
 
+#  data is in format : 1541503443,1023
 def parse_arduino_directory(directory):
     '''
     Takes as input the directory for the Arduino file.
