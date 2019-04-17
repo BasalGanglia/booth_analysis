@@ -3,6 +3,9 @@
 - A script that runs the python parsers on all the test subjects and store the data in a big dataframe
 - decide on common timeformat
 - check the interesting timings from Angela
+- get the start times from psychopy files
+- pyEEG
+- bandpass extraction
 
 # booth_analysis
 

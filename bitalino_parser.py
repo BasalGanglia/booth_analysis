@@ -43,5 +43,6 @@ def parse_bitalino_file(filename):
   
         stuff = pd.read_csv(filename, delimiter ='\t', comment=  '#', header= None, usecols=  [5, 6])
         stuff.bitalino_header = bitalino_header
+        stuff.columns = ['ECG', 'EDA']
   
     return stuff
