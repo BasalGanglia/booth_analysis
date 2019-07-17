@@ -29,7 +29,7 @@ def parse_matlab_file(filename, psy_date):
     timerows = timerows.T
     data = data.T
     eeg_data = np.concatenate((timerows, data), axis = 1)
-    eeg_data = pd.DataFrame(eeg_data)
+    eeg_data = pd.DataFrame(eeg_data, columns= ['Year', 'Month', 'Day', 'Hour', 'Minute', 'Second', 'SfromStart', 'Ch1', 'Ch2', 'Ch3', 'Ch4', 'Ch5', 'Ch6', 'Ch7', 'Ch8'])
     eeg_date = datetime.datetime(int(eeg_data.iloc[0, 0]), int(eeg_data.iloc[0, 1]) , int(eeg_data.iloc[0, 2]), int(eeg_data.iloc[0, 3]), int(eeg_data.iloc[0, 4]), int(eeg_data.iloc[0, 5]))
     
     start_time = datetime.datetime(year = psy_date.year, month = psy_date.month, day = psy_date.day, hour = eeg_date.hour, minute = eeg_date.minute, second = eeg_date.second,

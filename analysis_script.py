@@ -1,8 +1,9 @@
 import datetime
-
+import pandas as pd
+import os
 DATA_ROOT_DIR = "C:\\Users\\ilkka\\data\\Booth\\experiment\\"
 
-EXAMPLE_DIR = DATA_ROOT_DIR + "example"
+EXAMPLE_DIR = DATA_ROOT_DIR + "CSPM2"
 ARDUINO_DIR = EXAMPLE_DIR + "\\arduino\\"
 BITALINO_DIR = EXAMPLE_DIR + "\\bitalino\\"
 EEG_DIR = EXAMPLE_DIR + "\\eeg\\"
@@ -10,11 +11,10 @@ PSYCHOPY_DIR = EXAMPLE_DIR + "\\psychopy\\"
 # The following silly snippet might be needed when running
 #  stuff in Wing IDE python shell which seems not to default
 #  into the project working directory
+
 #import os
 #os.chdir("C:\\Users\\ilkka\\code\\booth_analysis")
 
-# import h5py
-# from arduino_parser import parse_arduino_file
 
 import arduino_parser
 import bitalino_parser
@@ -23,52 +23,71 @@ import EEG_parser
 import psychopy_parser
 
 import imp
-# imp.reload(arduino_parser)
-# imp.reload(bitalino_parser)
-imp.reload(psychopy_parser)
-psychopy_data = psychopy_parser.parse_psychopy_directory(PSYCHOPY_DIR)
 
-# parsing datime from psychopy:
-psy_date = datetime.datetime.strptime(psychopy_data.iloc[0, 0], '%Y-%m-%d %H:%M:%S.%f')
+def parse_user(subjectid):
 
-imp.reload(EEG_parser)
-eeg_data = EEG_parser.parse_eeg_directory(EEG_DIR, psy_date)
-#muf2 = EEG_parser.parse_eeg_directory(EEG_DIR)
-
-## puf = bitalino_parser.parse_bitalino_directory(BITALINO_DIR)
-imp.reload(arduino_parser)
-arduino_data = arduino_parser.parse_arduino_directory(ARDUINO_DIR, psy_date)
-## bitalino_data2 = bitalino_parser.parse_bitalino_directory(BITALINO_DIR)
-## bitalino_data = bitalino_parser.parse_bitalino_directory(BITALINO_DIR)
-
-imp.reload(bitalino_parser)
-bitalino_data = bitalino_parser.parse_bitalino_directory(BITALINO_DIR, psy_date)
-
-# bitalino_data2 = bitalino_data.apply(datetime)
-
-bit_date = datetime.datetime.strptime(bitalino_data.bitalino_header.timestamp, '%H:%M:%S.%f')
-bit_date = bit_date.replace(year = psy_date.year)
-bit_date = bit_date.replace(month = psy_date.month)
-bit_date = bit_date.replace(day = psy_date.day)
-arduino_time = datetime.datetime.utcfromtimestamp(arduino_data['Time'].iloc[0]).strftime('%Y-%m-%d %H:%M:%S')
-arduino_date = datetime.datetime.strptime(arduino_time, '%Y-%m-%d %H:%M:%S')
-
-# eeg_date = datetime.datetime(int(eeg_data.iloc[0, 0]), int(eeg_data.iloc[1, 0]) , int(eeg_data.iloc[2, 0]), int(eeg_data.iloc[3, 0]), int(eeg_data.iloc[4, 0]), int(eeg_data.iloc[5, 0]))
-#  Arduino logs are really screwed up... for soem reason the non-changing values are logged million times
-#  something like this : len(arduino_data['Time'].unique())
-#psychopy_data.columns = ['time', 'wat', 'data']
-#psychopy_data =psychopy_data[~psychopy_data.data.str.contains('blendMode')]
-#psychopy_data =psychopy_data[~psychopy_data.data.str.contains('MovieStim2')]
-#psychopy_data =psychopy_data[~psychopy_data.data.str.contains('MovieStim2')]
-# import pandas as pd
-
-# psychopy_data.to_csv("remainders.csv")
-
-
-
-# type(bitalino_data2.head_information)
+    #  Ok, following could maybe be done more elegantly
+    DATA_ROOT_DIR = "C:\\Users\\ilkka\\data\\Booth\\experiment\\I_b1w2\\data_sorted_by_participant\\"	
+    EXAMPLE_DIR = DATA_ROOT_DIR + subjectid
+    ARDUINO_DIR = EXAMPLE_DIR + "\\arduino\\"
+    BITALINO_DIR = EXAMPLE_DIR + "\\bitalino\\"
+    EEG_DIR = EXAMPLE_DIR + "\\eeg\\"
+    PSYCHOPY_DIR = EXAMPLE_DIR + "\\psychopy\\"    
+    print("The psychopydir is", PSYCHOPY_DIR)
+    imp.reload(psychopy_parser)
+    psychopy_data = psychopy_parser.parse_psychopy_directory(PSYCHOPY_DIR)
+    
+    # parsing date from psychopy as it is not in all the individual datafiles:
+    psy_date = datetime.datetime.strptime(psychopy_data.iloc[0, 0], '%Y-%m-%d %H:%M:%S.%f')
+    
+    # Parse the EEG DATA:
+    imp.reload(EEG_parser)
+    eeg_data = EEG_parser.parse_eeg_directory(EEG_DIR, psy_date)
+    
+    #  Parse the Trust feedback recorded with Arduino:
+    imp.reload(arduino_parser)
+    arduino_data = arduino_parser.parse_arduino_directory(ARDUINO_DIR, psy_date)
+    
+    #  Parse out ECG and EDA recorded with Bitalino:
+    imp.reload(bitalino_parser)
+    bitalino_data = bitalino_parser.parse_bitalino_directory(BITALINO_DIR, psy_date)
+    
+    # Merge the data from EEG, Bitalino (EDA/ECG) and Arduino (trust)
+    test_merge = pd.merge(eeg_data, bitalino_data, how = 'left', on= 'timestamp')
+    test_merge2 = pd.merge(test_merge, arduino_data, how= 'left', on = 'timestamp')
+    
+    #  The data was sampled at different sampling rates. Linearly interpolate data for the slower sampling rate
+    #  signals: 
+    final_data = test_merge2.interpolate()
+    #  Drop useless columns
+    final_data = final_data.drop(columns = ['Year', 'Month', 'Day', 'Hour', 'Minute', 'Second', 'SfromStart', 'Time'])
+    final_data['Subjectid'] = subjectid
+    return final_data
 
 
 
-#if __name__ == '__main__':
-    #main()
+if __name__ == '__main__':
+
+    datadir = "C:\\Users\\ilkka\\data\\Booth\\experiment\\I_b1w2\\data_sorted_by_participant"
+#using the silly i because enumerate complained about syntax error for reason i did not have time to investigate
+    i = 1
+    for filename in os.listdir(datadir):
+        print("We found this file: ", filename , " which is the ", i)
+        if i == 1:
+            data = parse_user(filename)
+        else:
+            data = pd.concat([data, parse_user(filename)])
+        #  enumerate did not work for whatever reason
+        i = i + 1
+     #   if i > 2:            
+       #     break
+        
+        #if filename.endswith(".txt"):
+            #f = open(filename)
+            #lines = f.read()
+            #print (lines[10])
+            #continue
+        #else:
+        #continue      
+  #  one_user = parse_user("CSPM2")
+    
