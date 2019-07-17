@@ -1,14 +1,18 @@
 import os
 import pandas as pd
 import json
+import numpy as np
+import datetime
+import time
 
 #  this returns a dataframe with two columns, first is ECG and second EDA, both sampled at 1000Hz
 #  there is also bitalino_header attribute in the returned object containing timestamp in format
 #  '11:16:52.678' and also a date object.. these have to be then converted to same time format as other
 #  signals.
 
+#  Psy date is bringing in the actual date as bitalino only has hours...
 
-def parse_bitalino_directory(directory):
+def parse_bitalino_directory(directory, psy_date):
     '''
     Takes as input the directory for the Bitalino files.
     Returns Pandas dataframe with 2 columns:
@@ -19,9 +23,9 @@ def parse_bitalino_directory(directory):
         for filename in files:
             print("we atleast found filenames? " + filename)
             if ".txt" in filename:
-                return parse_bitalino_file((directory + filename))
+                return parse_bitalino_file((directory + filename), psy_date)
             
-def parse_bitalino_file(filename):
+def parse_bitalino_file(filename, psy_date):
  
     with open(filename) as f:
         stuff = f.readline()
@@ -44,5 +48,22 @@ def parse_bitalino_file(filename):
         stuff = pd.read_csv(filename, delimiter ='\t', comment=  '#', header= None, usecols=  [5, 6])
         stuff.bitalino_header = bitalino_header
         stuff.columns = ['ECG', 'EDA']
-  
+        stuff['Time'] = np.arange(len(stuff))
+        
+        #  Maybe there is a way to do this with apply but damn if i know how, so loop time it is
+        
+    #    for i in range (1000):  # range(len(stuff)):
+     #       stuff.iloc[i, 2] = datetime.timedelta(milliseconds = float(stuff.iloc[i,2]) )
+        
+        # Above code is just way too slow...
+        bita_date =  datetime.datetime.strptime(bitalino_header.timestamp, '%H:%M:%S.%f')
+        start_time = datetime.datetime(year = psy_date.year, month = psy_date.month, day = psy_date.day, hour = bita_date.hour, minute = bita_date.minute, second = bita_date.second,
+                                       microsecond = bita_date.microsecond)
+        def my_funky(tehtime):
+#            datetime.timedelta(milliseconds = float(tehtime))
+            return start_time + datetime.timedelta(milliseconds = float(tehtime))
+        
+        stuff['timestamp'] = stuff['Time'].map(my_funky)
+        stuff = stuff.drop(axis = 1, columns = 'Time')
+#        start_time =  datetime.datetime.strptime(bitalino_header.timestamp, '%H:%M:%S.%f')
     return stuff
