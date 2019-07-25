@@ -48,6 +48,7 @@ def parse_bitalino_file(filename, psy_date):
         stuff = pd.read_csv(filename, delimiter ='\t', comment=  '#', header= None, usecols=  [5, 6])
         stuff.bitalino_header = bitalino_header
         stuff.columns = ['ECG', 'EDA']
+        
         stuff['Time'] = np.arange(len(stuff))
         
         #  Maybe there is a way to do this with apply but damn if i know how, so loop time it is
@@ -64,6 +65,25 @@ def parse_bitalino_file(filename, psy_date):
             return start_time + datetime.timedelta(milliseconds = float(tehtime))
         
         stuff['timestamp'] = stuff['Time'].map(my_funky)
-        stuff = stuff.drop(axis = 1, columns = 'Time')
+        #  The bitalino samples at 1000Hz which is too much (the full datamatrix becomes gigabytes in size)
+        #  downsample to 250 ms:
+     #   stuff = stuff.drop(axis = 1, columns = 'Time')
+      #  return stuff
+  #BELOW WORKS::      
+        tmpduh = stuff.set_index(stuff['timestamp'])
+        tmpduh2 = tmpduh.resample('4ms').mean()
+        tmpduh2 = tmpduh2.drop(axis = 1, columns = 'Time')
+        return tmpduh2
+    
+    
+    
+#  Below code does not work for whatever reason:
+ #       stuff.index = stuff.set_index(pd.DatetimeIndex(stuff['timestamp']))
+ #       stuff = stuff.resample('4ms').mean()
+  #      stuff = stuff.drop(axis = 1, columns = 'Time')
+    #    stuff.index = stuff.set_index('timestamp').resample('4ms')
+ #       stuff['ECG'] = stuff.ECG.resample('4ms')
+  #      stuff['EDA'] = stuff.EDa.resample('4ms')           
 #        start_time =  datetime.datetime.strptime(bitalino_header.timestamp, '%H:%M:%S.%f')
-    return stuff
+#    return stuff
+       

@@ -15,7 +15,9 @@ def parse_psychopy_directory(directory):
     1. time in seconds (since epoch)
     2. The trust gauge values (0-1024)    
     '''
-    for root, dirs, files in os.walk(directory):        
+    print("trying to access directory ", directory)
+    for root, dirs, files in os.walk(directory):
+        print("Before for loop")
         for filename in files:
             print("we atleast found filenames? " + filename)
             if ".csv" in filename:

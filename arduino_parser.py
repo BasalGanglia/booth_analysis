@@ -33,4 +33,3 @@ def parse_arduino_file(filename, psy_date):
     
     data['timestamp'] = data['Time'].map(my_funky)    
     return data
-    
