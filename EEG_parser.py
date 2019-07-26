@@ -18,13 +18,11 @@ def parse_matlab_file(filename, psy_date):
     #  Mat_contents is now a dictionary with one key, y, that contains a (15,m) numpy array
     #  the final six rows contain the timestamp: 
 
-   # mat_df = pd.Dataframe(mat_contents)
+  
     data = mat_contents['y']
     timerows = data[-6:, :]
-    print("first row is ", timerows[:, 0])
-
+ 
     mat_df = pd.DataFrame(timerows)
-#    times= mat_df.apply(lambda x: datetime.datetime(int(x[0]) , int(x[1] ), int(x[ 2] ), int(x[3] ), int(x[4]), int(x[ 5])))
     data = data[:-6, :]
     timerows = timerows.T
     data = data.T
@@ -36,19 +34,8 @@ def parse_matlab_file(filename, psy_date):
                                    microsecond = eeg_date.microsecond)
     
     def my_funky(tehtime):
-#            datetime.timedelta(milliseconds = float(tehtime))
         return start_time + datetime.timedelta(seconds = float(tehtime[6] ))
-    #    return datetime.datetime(year = int(tehtime.iloc[0]), month = int(tehtime.iloc[1]), day = int(tehtime.iloc[2]), hour = int(tehtime.iloc[3]), minute = int(tehtime.iloc[4]),
-     #                            second = int(tehtime.iloc[5]), microsecond = int(tehtime.iloc[6]))   
-    
- #   EEG = pd.DataFrame(data)
-  #  stuff['timestamp'] = stuff['Time'].map(my_funky)
-     
+
     eeg_data["timestamp"] = eeg_data.apply(my_funky, axis = 1)
-    # as the arduino outputs seconds since epochs we have to use that as the common time format
-    
-   # with h5py.File(filename, 'r') as f:
-   #     mat_contents = f.keys()
-  #  return times
-#    return EEG
+
     return eeg_data
