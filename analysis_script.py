@@ -20,6 +20,7 @@ import bitalino_parser
 import opensignals_reader
 import EEG_parser
 import psychopy_parser
+import Peripheral_analyser
 
 import imp
 
@@ -40,10 +41,10 @@ def parse_user(subjectid, datadir):
     BITALINO_DIR = EXAMPLE_DIR + "\\bitalino\\"
     EEG_DIR = EXAMPLE_DIR + "\\eeg\\"
     PSYCHOPY_DIR = EXAMPLE_DIR + "\\psychopy\\"    
-    print("The psychopydir is", PSYCHOPY_DIR)
+  #  print("The psychopydir is", PSYCHOPY_DIR)
     
     labels = pd.read_csv(LABELS_FILE, sep = ';')
-    
+    imp.reload(Peripheral_analyser)
     imp.reload(psychopy_parser)
     psychopy_data = psychopy_parser.parse_psychopy_directory(PSYCHOPY_DIR)
     
@@ -85,7 +86,7 @@ def parse_user(subjectid, datadir):
 
 
     # Parsing out the parts with different amount of empathy:
-  
+    features = {}
     for idxi, label in labels.iterrows():
         
   
@@ -97,12 +98,19 @@ def parse_user(subjectid, datadir):
         
         neutral_slice = final_data.between_time((final_data.index[0] + start_delta).time(), (final_data.index[0] + end_delta).time())
         neutral_slice['empathy_level'] = label.empathy_level        
-        
         if idxi == 0:
             neutral_slices = neutral_slice
+            features = Peripheral_analyser.extract_peripheral_features(neutral_slice)
+            features['Subjectid'] = subjectid
+            features['Empathy_level'] = label.empathy_level            
+            features_df = pd.DataFrame.from_dict([features], orient = 'columns')
+         
         else:
             neutral_slices = pd.concat([neutral_slices, neutral_slice])
-        
+            features = Peripheral_analyser.extract_peripheral_features(neutral_slice)
+            features['Subjectid'] = subjectid
+            features['Empathy_level'] = label.empathy_level            
+            features_df = pd.concat([features_df, pd.DataFrame.from_dict([features], orient = 'columns')])
         #start_t = datetime.datetime.strptime(labels.iloc[1].starting_time, '%M:%S')
         #end_t = datetime.datetime.strptime(labels.iloc[1].ending_time, '%M:%S')
         
@@ -123,7 +131,7 @@ def parse_user(subjectid, datadir):
     
     
     
-    return final_data, psychopy_data, trust_data, neutral_slice
+    return final_data, psychopy_data, trust_data, neutral_slice, features_df
 
 
 
@@ -143,22 +151,24 @@ if __name__ == '__main__':
  #       if filename != "W0PIK":
   #         continue;
        
-   #     if filename != "MDPQ4":    
-#            continue;
+    #    if filename != "TIIGK":    
+     #       continue;
         if i == 1:
-            all_data, all_timestamps, all_trust, all_empathy = parse_user(filename, datadir)
+            all_data, all_timestamps, all_trust, all_empathy, all_features = parse_user(filename, datadir)
         else:
-            data2, psyd2, trust_dat2, empathy2 = parse_user(filename, datadir)
+            data2, psyd2, trust_dat2, empathy2, features2 = parse_user(filename, datadir)
        
             all_data = pd.concat([all_data, data2])
             all_timestamps = pd.concat([all_timestamps, psyd2])
             all_trust = pd.concat([all_trust, trust_dat2])
             all_empathy = pd.concat([all_empathy, empathy2])
+            all_features = pd.concat([all_features, features2])
+            
             #           data = pd.concat([data, parse_user(filename, datadir)])
         #  enumerate did not work for whatever reason
         i = i + 1
-   #     if i > 1:
-    #        break
+        #if i > 1:
+            #break
         
         #if filename.endswith(".txt"):
             #f = open(filename)

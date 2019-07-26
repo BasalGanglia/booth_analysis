@@ -64,7 +64,7 @@ def parse_bitalino_file(filename, psy_date):
         #  downsample to 250 ms:
   
         _tmp = stuff.set_index(stuff['timestamp'])
-        _tmp2 = _duh.resample('4ms').mean()
-        _duh2 = _duh2.drop(axis = 1, columns = 'Time')
-        return _duh2
+        _tmp2 = _tmp.resample('4ms').mean()
+        _tmp2 = _tmp2.drop(axis = 1, columns = 'Time')
+        return _tmp2
     
