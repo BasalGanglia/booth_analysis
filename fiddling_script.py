@@ -26,7 +26,7 @@ scalings = 'auto'
 #  trying to filter the data:
 
 
-fmin, fmax = 2, 300  # look at frequencies between 2 and 300Hz
+fmin, fmax = 1, 100 # look at frequencies between 2 and 300Hz
 n_fft = 2048  # the FFT size (n_fft). Ideally a power of 2
 
 
@@ -128,3 +128,70 @@ df['val'] = [eeg_band_fft[band] for band in eeg_bands]
 ax = df.plot.bar(x='band', y='val', legend=False)
 ax.set_xlabel("EEG band")
 ax.set_ylabel("Mean band Amplitude")
+
+
+
+#  Wide to long ...
+
+import numpy as np
+import pandas as pd
+
+# REPRODUCIBLE EXAMPLE
+df = pd.DataFrame({'_id': list(range(1,11))*5,
+                   '_ts':[300 for i in range(10)] + [600 for i in range(10)] +
+                         [900 for i in range(10)] + [1200 for i in range(10)] +
+                         [1500 for i in range(10)],
+                   'metric1': np.random.randn(50),
+                   'metric2': np.random.randn(50),
+                   'metric3': np.random.randn(50)})
+
+
+# FIRST 2 AND LAST VALUES (SORTED IN _ts ORDER)
+first2vals = pd.Series(df['_ts'].unique()).sort_values().tolist()[:2]
+lastval = pd.Series(df['_ts'].unique()).sort_values().tolist()[-1]
+
+# FILTER DATA FRAME BY ABOVE LISTS
+df = df[df['_ts'].isin(first2vals + [lastval])]
+
+# PIVOT DATA FRAME
+pvtdf = df.pivot_table(index="_id", columns=['_ts'], 
+                       values=['metric1', 'metric2', 'metric3']).reset_index()
+
+# EXTRACT NEW COLUMNS FROM HIERARCHICAL INDEX
+newcols = [str(i[1])+'_'+str(i[0]) for i in pvtdf.columns[1:].values]
+pvtdf.columns = pvtdf.columns.get_level_values(0)
+pvtdf.columns = ['id'] + newcols
+
+
+#  There don't seem to be ready made way to go from wide to long this way, so
+#  I suppose it have to do it manually.. there probably is some much more elegant
+#  way to do it but what the heck, for loop time!
+#  edit: this merge nonsense is ridiculous... is there really no working way in pandas
+#  to concatenate columns..
+for i in range(0, 8):  
+    one_row_df = data.iloc[[i], :]
+    one_row_df.columns = one_row_df.columns + str(i)
+    one_row_df['merger'] = 1
+    if i == 0:        
+        new_df = one_row_df.copy( ) 
+    else:
+        new_df = pd.merge( one_row_df, new_df, how = 'outer', on = 'merger')
+    #    new_df = pd.concat([new_df, one_row_df], ignore_index= True, axis= 1)
+    new_df.drop('merger', inplace = True, axis = 1)
+    return new_df
+
+def widen_features(df):
+    for i in range(0, 8):  
+        one_row_df = df.iloc[[i], :].copy()
+        one_row_df.columns = one_row_df.columns + str(i)
+        one_row_df['merger'] = 1
+        if i == 0:        
+            new_df = one_row_df.copy( ) 
+        else:
+            new_df = pd.merge( one_row_df, new_df, how = 'outer', on = 'merger')
+        #    new_df = pd.concat([new_df, one_row_df], ignore_index= True, axis= 1)
+        
+    new_df.drop('merger', inplace = True, axis = 1)
+        
+    return new_df
+    

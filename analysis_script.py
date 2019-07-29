@@ -19,10 +19,32 @@ import arduino_parser
 import bitalino_parser
 import opensignals_reader
 import EEG_parser
+import EEG_analyzer
 import psychopy_parser
 import Peripheral_analyser
 
 import imp
+
+#  There don't seem to be ready made way to go from wide to long this way, so
+#  I suppose it have to do it manually.. there probably is some much more elegant
+#  way to do it but what the heck, for loop time!
+#  edit: this merge nonsense is ridiculous... is there really no working way in pandas
+#  to concatenate columns..
+
+def widen_features(df):
+    for i in range(0, 8):  
+        one_row_df = df.iloc[[i], :].copy()
+        one_row_df.columns = one_row_df.columns + str(i)
+        one_row_df['merger'] = 1
+        if i == 0:        
+            new_df = one_row_df.copy( ) 
+        else:
+            new_df = pd.merge( one_row_df, new_df, how = 'outer', on = 'merger')
+            
+    new_df.drop('merger', inplace = True, axis = 1)
+        
+    return new_df
+
 
 #  Quick helper method to change the data types from float64 to float32 to save some space
 def change_floats(df, column_list):
@@ -54,7 +76,7 @@ def parse_user(subjectid, datadir):
     # Parse the EEG DATA:
     imp.reload(EEG_parser)
     eeg_data = EEG_parser.parse_eeg_directory(EEG_DIR, psy_date)
-    
+    imp.reload(EEG_analyzer)
     #  Parse the Trust feedback recorded with Arduino:
     imp.reload(arduino_parser)
     arduino_data = arduino_parser.parse_arduino_directory(ARDUINO_DIR, psy_date)
@@ -102,15 +124,29 @@ def parse_user(subjectid, datadir):
             neutral_slices = neutral_slice
             features = Peripheral_analyser.extract_peripheral_features(neutral_slice)
             features['Subjectid'] = subjectid
-            features['Empathy_level'] = label.empathy_level            
+            features['Empathy_level'] = label.empathy_level
+            features['trialid'] = idxi
+            eeg_features = EEG_analyzer.Analyze_EEG(neutral_slice)
             features_df = pd.DataFrame.from_dict([features], orient = 'columns')
-         
+            eeg_features = widen_features(eeg_features)
+            eeg_features['trialid'] = idxi
+            features_df = pd.merge(features_df, eeg_features, how= 'outer', on= 'trialid')
+            
         else:
             neutral_slices = pd.concat([neutral_slices, neutral_slice])
             features = Peripheral_analyser.extract_peripheral_features(neutral_slice)
             features['Subjectid'] = subjectid
-            features['Empathy_level'] = label.empathy_level            
-            features_df = pd.concat([features_df, pd.DataFrame.from_dict([features], orient = 'columns')])
+            features['Empathy_level'] = label.empathy_level
+            features['trialid'] = idxi
+            eeg_features = EEG_analyzer.Analyze_EEG(neutral_slice)
+            tmp_features_df = pd.DataFrame.from_dict([features], orient = 'columns')
+            eeg_features = widen_features(eeg_features)
+            eeg_features['trialid'] = idxi
+            tmp_features_df = pd.merge(tmp_features_df, eeg_features, how= 'outer', on='trialid')
+            features_df = pd.concat([features_df, tmp_features_df])
+          
+    
+    
         #start_t = datetime.datetime.strptime(labels.iloc[1].starting_time, '%M:%S')
         #end_t = datetime.datetime.strptime(labels.iloc[1].ending_time, '%M:%S')
         
@@ -138,8 +174,8 @@ def parse_user(subjectid, datadir):
 
 if __name__ == '__main__':
 
- #   datadir = "C:\\Users\\ilkka\\data\\Booth\\experiment\\I_b1w2\\data_sorted_by_participant"
-    datadir = "C:\\Users\\ilkka\\data\\Booth\\experiment\\II_b2w1\\data_sorted_by_participant\\"
+    datadir = "C:\\Users\\ilkka\\data\\Booth\\experiment\\I_b1w2\\data_sorted_by_participant\\"
+ #   datadir = "C:\\Users\\ilkka\\data\\Booth\\experiment\\II_b2w1\\data_sorted_by_participant\\"
 
 #using the silly i because enumerate complained about syntax error for reason i did not have time to investigate
     i = 1
@@ -167,8 +203,8 @@ if __name__ == '__main__':
             #           data = pd.concat([data, parse_user(filename, datadir)])
         #  enumerate did not work for whatever reason
         i = i + 1
-        #if i > 1:
-            #break
+     #   if i > 1:
+      #      break
         
         #if filename.endswith(".txt"):
             #f = open(filename)
