@@ -10,11 +10,7 @@ ARDUINO_DIR = EXAMPLE_DIR + "\\arduino\\"
 BITALINO_DIR = EXAMPLE_DIR + "\\bitalino\\"
 EEG_DIR = EXAMPLE_DIR + "\\eeg\\"
 PSYCHOPY_DIR = EXAMPLE_DIR + "\\psychopy\\"
-# The following silly snippet might be needed when running
-#  stuff in Wing IDE python shell which seems not to default
-#  into the project working directory
-#import os
-#os.chdir("C:\\Users\\ilkka\\code\\booth_analysis")
+
 import arduino_parser
 import bitalino_parser
 import opensignals_reader
@@ -32,6 +28,10 @@ import imp
 #  to concatenate columns..
 
 def widen_features(df):
+    """
+    A Helper function that takes matrix of features and transforms them
+    into one long (horizontal) vector.
+    """
     for i in range(0, 8):  
         one_row_df = df.iloc[[i], :].copy()
         one_row_df.columns = one_row_df.columns + str(i)
@@ -48,24 +48,28 @@ def widen_features(df):
 
 #  Quick helper method to change the data types from float64 to float32 to save some space
 def change_floats(df, column_list):
+    """
+    Change data type in a pandas dataframe from float64 to float32
+    """
     df[column_list] = df[column_list].apply(pd.to_numeric, downcast = 'float')
     return df
 
+#  Parse data from one subject. takes as input the root dir and subject id for the participant
 def parse_user(subjectid, datadir):
 
-    #  Ok, following could maybe be done more elegantly
-    #   DATA_ROOT_DIR = "C:\\Users\\ilkka\\data\\Booth\\experiment\\I_b1w2\\data_sorted_by_participant\\"
     DATA_ROOT_DIR = datadir
     
     EXAMPLE_DIR = DATA_ROOT_DIR + subjectid
-#    EXAMPLE_DIR = "C:\\Users\\ilkka\\data\\Booth\\experiment\\II_b2w1\\data_sorted_by_participant\\B0HBS"
     ARDUINO_DIR = EXAMPLE_DIR + "\\arduino\\"
     BITALINO_DIR = EXAMPLE_DIR + "\\bitalino\\"
     EEG_DIR = EXAMPLE_DIR + "\\eeg\\"
     PSYCHOPY_DIR = EXAMPLE_DIR + "\\psychopy\\"    
-  #  print("The psychopydir is", PSYCHOPY_DIR)
-    
+
+# Labels are the manually annotated labels for empathic moments in the narrative    
     labels = pd.read_csv(LABELS_FILE, sep = ';')
+#  All these imp.reloads are just in case I want to run stuff in Wing IDE shell, so it automatically load changes
+#  from the other libraries (in case they were changed). Otherwise, if  I do changes to,say, Peripheral_analyser.py
+#  simple "import Peripheral_analyser.py" won't reload it if there already exists some version of the library.
     imp.reload(Peripheral_analyser)
     imp.reload(psychopy_parser)
     psychopy_data = psychopy_parser.parse_psychopy_directory(PSYCHOPY_DIR)
