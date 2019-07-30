@@ -8,8 +8,7 @@ import pandas as pd
 
 def parse_eeg_directory(directory, psy_date):
     for root, dirs, files in os.walk(directory):        
-        for filename in files:
-            print("we atleast found filenames? " + filename)
+        for filename in files:                        
             if ".mat" in filename:
                 return parse_matlab_file((directory + filename), psy_date)
 
@@ -17,7 +16,6 @@ def parse_matlab_file(filename, psy_date):
     mat_contents = hdf5storage.loadmat(filename)
     #  Mat_contents is now a dictionary with one key, y, that contains a (15,m) numpy array
     #  the final six rows contain the timestamp: 
-
   
     data = mat_contents['y']
     timerows = data[-6:, :]

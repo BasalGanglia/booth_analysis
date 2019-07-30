@@ -13,11 +13,10 @@ PSYCHOPY_DIR = EXAMPLE_DIR + "\\psychopy\\"
 
 import arduino_parser
 import bitalino_parser
-import opensignals_reader
 import EEG_parser
-import EEG_analyzer
+import EEG_analyser
 import psychopy_parser
-import Peripheral_analyser
+import peripheral_analyser
 
 import imp
 
@@ -41,10 +40,8 @@ def widen_features(df):
         else:
             new_df = pd.merge( one_row_df, new_df, how = 'outer', on = 'merger')
             
-    new_df.drop('merger', inplace = True, axis = 1)
-        
+    new_df.drop('merger', inplace = True, axis = 1)        
     return new_df
-
 
 #  Quick helper method to change the data types from float64 to float32 to save some space
 def change_floats(df, column_list):
@@ -65,28 +62,32 @@ def parse_user(subjectid, datadir):
     EEG_DIR = EXAMPLE_DIR + "\\eeg\\"
     PSYCHOPY_DIR = EXAMPLE_DIR + "\\psychopy\\"    
 
+    #  All these imp.reloads are just in case I want to run stuff in Wing IDE shell, so it automatically load changes
+    #  from the other libraries (in case they were changed). Otherwise, if  I do changes to,say, peripheral_analyser.py
+    #  simple "import Peripheral_analyser.py" won't reload it if there already exists some version of the library.
+    imp.reload(peripheral_analyser)
+    imp.reload(psychopy_parser)
+    imp.reload(EEG_parser)
+    imp.reload(EEG_analyser)
+    imp.reload(arduino_parser)
+    imp.reload(bitalino_parser)
+        
 # Labels are the manually annotated labels for empathic moments in the narrative    
     labels = pd.read_csv(LABELS_FILE, sep = ';')
-#  All these imp.reloads are just in case I want to run stuff in Wing IDE shell, so it automatically load changes
-#  from the other libraries (in case they were changed). Otherwise, if  I do changes to,say, Peripheral_analyser.py
-#  simple "import Peripheral_analyser.py" won't reload it if there already exists some version of the library.
-    imp.reload(Peripheral_analyser)
-    imp.reload(psychopy_parser)
+
+#  Parse the timings from  
     psychopy_data = psychopy_parser.parse_psychopy_directory(PSYCHOPY_DIR)
     
     # parsing date from psychopy as it is not in all the individual datafiles:
     psy_date = datetime.datetime.strptime(psychopy_data.iloc[0, 0], '%Y-%m-%d %H:%M:%S.%f')
     
     # Parse the EEG DATA:
-    imp.reload(EEG_parser)
     eeg_data = EEG_parser.parse_eeg_directory(EEG_DIR, psy_date)
-    imp.reload(EEG_analyzer)
+   
     #  Parse the Trust feedback recorded with Arduino:
-    imp.reload(arduino_parser)
     arduino_data = arduino_parser.parse_arduino_directory(ARDUINO_DIR, psy_date)
     
-    #  Parse out ECG and EDA recorded with Bitalino:
-    imp.reload(bitalino_parser)
+    #  Parse out ECG and EDA recorded with Bitalino:  
     bitalino_data = bitalino_parser.parse_bitalino_directory(BITALINO_DIR, psy_date)
     
     # Merge the data from EEG, Bitalino (EDA/ECG) and Arduino (trust)
@@ -101,6 +102,8 @@ def parse_user(subjectid, datadir):
     finaldata['Subjectid'] = subjectid
     final_data = finaldata.set_index('timestamp')
     final_data = change_floats(final_data, ['Ch1', 'Ch2', 'Ch3', 'Ch4', 'Ch5', 'Ch6', 'Ch7', 'Ch8', 'ECG', 'EDA'])
+    
+    #  Below parse out the timings for the section of the experiment where participants gave trust feedback
     #  this code is pretty ugly due to the different timestamp formats these pandas methods require..
     trust_start_1 = datetime.datetime.strptime(psychopy_data['startav'].iloc[1], '%Y-%m-%d %H:%M:%S.%f')
     trust_start_2 = datetime.datetime.strptime(psychopy_data['startav'].iloc[3], '%Y-%m-%d %H:%M:%S.%f')
@@ -114,64 +117,41 @@ def parse_user(subjectid, datadir):
     # Parsing out the parts with different amount of empathy:
     features = {}
     for idxi, label in labels.iterrows():
-        
-  
+          
         start_t = datetime.datetime.strptime(label.starting_time, '%M:%S')
         end_t = datetime.datetime.strptime(label.ending_time, '%M:%S')
         
         start_delta = timedelta(minutes = start_t.minute, seconds = start_t.second)
         end_delta = timedelta(minutes = end_t.minute, seconds = end_t.second)    
         
-        neutral_slice = final_data.between_time((final_data.index[0] + start_delta).time(), (final_data.index[0] + end_delta).time())
-        neutral_slice['empathy_level'] = label.empathy_level        
+        empathy_slice = final_data.between_time((final_data.index[0] + start_delta).time(), (final_data.index[0] + end_delta).time())
+        empathy_slice['empathy_level'] = label.empathy_level        
         if idxi == 0:
-            neutral_slices = neutral_slice
-            features = Peripheral_analyser.extract_peripheral_features(neutral_slice)
+            empathy_slices = empathy_slice
+            features = peripheral_analyser.extract_peripheral_features(empathy_slice)
             features['Subjectid'] = subjectid
             features['Empathy_level'] = label.empathy_level
             features['trialid'] = idxi
-            eeg_features = EEG_analyzer.Analyze_EEG(neutral_slice)
+            eeg_features = EEG_analyser.Analyse_EEG(empathy_slice)
             features_df = pd.DataFrame.from_dict([features], orient = 'columns')
             eeg_features = widen_features(eeg_features)
             eeg_features['trialid'] = idxi
             features_df = pd.merge(features_df, eeg_features, how= 'outer', on= 'trialid')
             
         else:
-            neutral_slices = pd.concat([neutral_slices, neutral_slice])
-            features = Peripheral_analyser.extract_peripheral_features(neutral_slice)
+            empathy_slices = pd.concat([empathy_slices, empathy_slice])
+            features = Peripheral_analyser.extract_peripheral_features(empathy_slice)
             features['Subjectid'] = subjectid
             features['Empathy_level'] = label.empathy_level
             features['trialid'] = idxi
-            eeg_features = EEG_analyzer.Analyze_EEG(neutral_slice)
+            eeg_features = EEG_analyser.Analyse_EEG(empathy_slice)
             tmp_features_df = pd.DataFrame.from_dict([features], orient = 'columns')
             eeg_features = widen_features(eeg_features)
             eeg_features['trialid'] = idxi
             tmp_features_df = pd.merge(tmp_features_df, eeg_features, how= 'outer', on='trialid')
             features_df = pd.concat([features_df, tmp_features_df])
-          
-    
-    
-        #start_t = datetime.datetime.strptime(labels.iloc[1].starting_time, '%M:%S')
-        #end_t = datetime.datetime.strptime(labels.iloc[1].ending_time, '%M:%S')
-        
-        #start_delta = timedelta(minutes = start_t.minute, seconds = start_t.second)
-        #end_delta = timedelta(minutes = end_t.minute, seconds = end_t.second)    
-    
-        #neutral_slice = final_data.between_time((final_data.index[0] + start_delta).time(), (final_data.index[0] + end_delta).time())
-        #neutral_slice['empathy_level'] = labels.iloc[1].empathy_level
-# test_sub.between_time(test_sub.index[0].time(), (test_sub.index[0] + delta).time())
-
-   # what  psychopy_data looks like
-        #startav                       endav  ...   avatar primes
-    #1   2018-11-12 12:35:16.594000  2018-11-12 12:40:16.971000  ...       w1     p1
-    #44  2018-11-12 12:51:33.194000  2018-11-12 12:56:33.700000  ...       w1     p1
-    #45  2018-11-12 13:05:55.843000  2018-11-12 13:10:56.224000  ...       b2     p2
-    #88  2018-11-12 13:15:52.631000  2018-11-12 13:20:53.029000  ...       b2     p2   
-    #  HERE WE MUST EXTRACT THE ACTUAL FEATURES INSTEAD OF RAW DATA:
-    
-    
-    
-    return final_data, psychopy_data, trust_data, neutral_slice, features_df
+   
+    return final_data, psychopy_data, trust_data, empathy_slice, features_df
 
 
 
@@ -183,8 +163,6 @@ if __name__ == '__main__':
 
 #using the silly i because enumerate complained about syntax error for reason i did not have time to investigate
     i = 1
-
-    
     for filename in os.listdir(datadir):
         print("We found this file: ", filename , " which is the ", i)
    
@@ -204,18 +182,9 @@ if __name__ == '__main__':
             all_empathy = pd.concat([all_empathy, empathy2])
             all_features = pd.concat([all_features, features2])
             
-            #           data = pd.concat([data, parse_user(filename, datadir)])
-        #  enumerate did not work for whatever reason
         i = i + 1
      #   if i > 1:
       #      break
         
-        #if filename.endswith(".txt"):
-            #f = open(filename)
-            #lines = f.read()
-            #print (lines[10])
-            #continue
-        #else:
-        #continue      
-  #  one_user = parse_user("CSPM2")
   
+      

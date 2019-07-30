@@ -1,3 +1,7 @@
+"""
+This script contain just various code snippets I tried out 
+"""
+
 # test_sub = all_data[all_data['Subjectid'] == 'YY40E']
 # import pickle
 import pandas as pd
@@ -136,31 +140,6 @@ ax.set_ylabel("Mean band Amplitude")
 import numpy as np
 import pandas as pd
 
-# REPRODUCIBLE EXAMPLE
-df = pd.DataFrame({'_id': list(range(1,11))*5,
-                   '_ts':[300 for i in range(10)] + [600 for i in range(10)] +
-                         [900 for i in range(10)] + [1200 for i in range(10)] +
-                         [1500 for i in range(10)],
-                   'metric1': np.random.randn(50),
-                   'metric2': np.random.randn(50),
-                   'metric3': np.random.randn(50)})
-
-
-# FIRST 2 AND LAST VALUES (SORTED IN _ts ORDER)
-first2vals = pd.Series(df['_ts'].unique()).sort_values().tolist()[:2]
-lastval = pd.Series(df['_ts'].unique()).sort_values().tolist()[-1]
-
-# FILTER DATA FRAME BY ABOVE LISTS
-df = df[df['_ts'].isin(first2vals + [lastval])]
-
-# PIVOT DATA FRAME
-pvtdf = df.pivot_table(index="_id", columns=['_ts'], 
-                       values=['metric1', 'metric2', 'metric3']).reset_index()
-
-# EXTRACT NEW COLUMNS FROM HIERARCHICAL INDEX
-newcols = [str(i[1])+'_'+str(i[0]) for i in pvtdf.columns[1:].values]
-pvtdf.columns = pvtdf.columns.get_level_values(0)
-pvtdf.columns = ['id'] + newcols
 
 
 #  There don't seem to be ready made way to go from wide to long this way, so
