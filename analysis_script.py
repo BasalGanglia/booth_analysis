@@ -154,23 +154,14 @@ def parse_user(subjectid, datadir):
     return final_data, psychopy_data, trust_data, empathy_slice, features_df
 
 
-
-
 if __name__ == '__main__':
 
   #  datadir = "C:\\Users\\ilkka\\data\\Booth\\experiment\\I_b1w2\\data_sorted_by_participant\\"
     datadir = "C:\\Users\\ilkka\\data\\Booth\\experiment\\II_b2w1\\data_sorted_by_participant\\"
 
-#using the silly i because enumerate complained about syntax error for reason i did not have time to investigate
     i = 1
     for filename in os.listdir(datadir):
-   #     print("We found this file: ", filename , " which is the ", i)
-   
- #       if filename != "W0PIK":
-  #         continue;
-       
-    #    if filename != "TIIGK":    
-     #       continue;
+
         if i == 1:
             all_data, all_timestamps, all_trust, all_empathy, all_features = parse_user(filename, datadir)
         else:
@@ -183,8 +174,5 @@ if __name__ == '__main__':
             all_features = pd.concat([all_features, features2])
             
         i = i + 1
-     #   if i > 1:
-      #      break
-        
   
       
