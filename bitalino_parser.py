@@ -29,7 +29,7 @@ def parse_bitalino_file(filename, psy_date):
     with open(filename) as f:
         stuff = f.readline()
         stuff = f.readline()
-        print(" the interesting stuff is {0} ".format(stuff[1:]))
+    
         tmp_header = json.loads(stuff[1:])
         
     

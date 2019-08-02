@@ -140,7 +140,7 @@ def parse_user(subjectid, datadir):
             
         else:
             empathy_slices = pd.concat([empathy_slices, empathy_slice])
-            features = Peripheral_analyser.extract_peripheral_features(empathy_slice)
+            features = peripheral_analyser.extract_peripheral_features(empathy_slice)
             features['Subjectid'] = subjectid
             features['Empathy_level'] = label.empathy_level
             features['trialid'] = idxi
@@ -158,13 +158,13 @@ def parse_user(subjectid, datadir):
 
 if __name__ == '__main__':
 
-    datadir = "C:\\Users\\ilkka\\data\\Booth\\experiment\\I_b1w2\\data_sorted_by_participant\\"
- #   datadir = "C:\\Users\\ilkka\\data\\Booth\\experiment\\II_b2w1\\data_sorted_by_participant\\"
+  #  datadir = "C:\\Users\\ilkka\\data\\Booth\\experiment\\I_b1w2\\data_sorted_by_participant\\"
+    datadir = "C:\\Users\\ilkka\\data\\Booth\\experiment\\II_b2w1\\data_sorted_by_participant\\"
 
 #using the silly i because enumerate complained about syntax error for reason i did not have time to investigate
     i = 1
     for filename in os.listdir(datadir):
-        print("We found this file: ", filename , " which is the ", i)
+   #     print("We found this file: ", filename , " which is the ", i)
    
  #       if filename != "W0PIK":
   #         continue;
